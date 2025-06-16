@@ -55,12 +55,12 @@ const TaskDetailsModal: React.FC = () => {
 
   return (
     <Dialog open={!!taskForDetails} onOpenChange={(isOpen) => !isOpen && closeDetailsModal()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg mx-4">
         <DialogHeader>
           <DialogTitle>Task Details</DialogTitle>
           <p className="text-sm text-neutral-500 truncate pt-1">{taskForDetails.text}</p>
         </DialogHeader>
-        <div className="py-4 space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
           <div>
             <label htmlFor="task-notes" className="block text-sm font-medium text-neutral-700 mb-1">
               Notes
@@ -71,6 +71,7 @@ const TaskDetailsModal: React.FC = () => {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add any notes for this task..."
               rows={4}
+              className="focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
@@ -106,7 +107,7 @@ const TaskDetailsModal: React.FC = () => {
                 value={newSubTaskText}
                 onChange={(e) => setNewSubTaskText(e.target.value)}
                 placeholder="Add a new sub-task"
-                className="flex-grow"
+                className="flex-grow focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:border-blue-500"
                 onKeyPress={(e) => e.key === "Enter" && handleAddSubTask()}
               />
               <Button onClick={handleAddSubTask} size="icon" variant="outline" aria-label="Add sub-task">
