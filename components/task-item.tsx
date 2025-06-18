@@ -36,12 +36,17 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
   }
 
   const handleLongPress = () => {
-    if (isTaskSwiping) return // Don't trigger long press during swipe
+    // This check is now redundant because cancelCondition handles it in useLongPress
+    // if (isTaskSwiping) return;
+    console.log("Long press triggered for:", task.text)
     openReassignModal(task)
   }
 
-  // Only apply long press to the text area, not the entire task
-  const longPressEvents = useLongPress(handleLongPress, handleTaskTextClick, { delay: 500 })
+  // Pass isTaskSwiping as the cancelCondition to prevent long press during a swipe
+  const longPressEvents = useLongPress(handleLongPress, handleTaskTextClick, {
+    delay: 500,
+    cancelCondition: isTaskSwiping, // CRITICAL: Pass the swiping state here
+  })
 
   const resetSwipe = () => {
     setSwipeOffset(0)
@@ -52,7 +57,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
   const taskSwipeHandlers = useSwipeable({
     onSwipeStart: (eventData) => {
       console.log("Task swipe started")
-      setIsTaskSwiping(true)
+      setIsTaskSwiping(true) // Set swiping state immediately
       // Stop the event from reaching parent handlers
       eventData.event.stopPropagation()
       if (eventData.event.cancelable) {
