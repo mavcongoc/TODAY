@@ -8,7 +8,7 @@ import { useTasks } from "@/contexts/task-context"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useLongPress } from "@/hooks/use-long-press"
 import { cn } from "@/lib/utils"
-import { Trash2, ListChecks, Edit3 } from 'lucide-react'
+import { Trash2, ListChecks, Edit3 } from "lucide-react"
 
 interface TaskItemProps {
   task: Task
@@ -143,10 +143,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
         style={{ transform: `translateX(${swipeOffset}px)` }}
       >
         {/* Checkbox Area - Isolated interaction */}
-        <div 
-          className="shrink-0 p-1 -m-1 cursor-pointer rounded hover:bg-neutral-100"
-          onClick={handleCheckboxClick}
-        >
+        <div className="shrink-0 p-1 -m-1 cursor-pointer rounded hover:bg-neutral-100" onClick={handleCheckboxClick}>
           <Checkbox
             id={`task-${task.id}`}
             checked={task.completed}
@@ -157,7 +154,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
         </div>
 
         {/* Text Area - Has long press and click handlers */}
-        <div 
+        <div
           {...longPressEvents}
           className="flex-grow cursor-pointer"
           role="button"
