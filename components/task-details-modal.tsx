@@ -111,7 +111,7 @@ const TaskDetailsModal: React.FC = () => {
                     aria-label="Delete sub-task"
                     className="shrink-0 h-7 w-7 sm:h-8 sm:w-8"
                   >
-                    <Trash2 size={14} sm:size={16} className="text-neutral-500 hover:text-red-500" />
+                    <Trash2 size={14} className="text-neutral-500 hover:text-red-500" />
                   </Button>
                 </div>
               ))}
@@ -132,7 +132,7 @@ const TaskDetailsModal: React.FC = () => {
                 aria-label="Add sub-task"
                 className="shrink-0 h-9 w-9 sm:h-10 sm:w-10"
               >
-                <PlusCircle size={18} sm:size={20} />
+                <PlusCircle size={18} />
               </Button>
             </div>
             {subTasks.length === 0 && (
