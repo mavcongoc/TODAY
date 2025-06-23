@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import type { Task, TaskContextType, DueCategory, SubTask } from "@/lib/types"
 import { getTodayDateString, getDueCategory } from "@/lib/date-utils"
 import { TaskStorage } from "@/lib/storage"
-import { format } from "date-fns" // Import format
+import { format } from "date-fns"
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined)
 
@@ -18,38 +18,39 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true)
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null)
 
-  // Initialize notification permission state on mount
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
+      console.log("[TaskContext] Initial Notification.permission from browser:", Notification.permission)
       setNotificationPermission(Notification.permission)
+    } else {
+      console.log("[TaskContext] Notifications not supported or window not defined.")
     }
   }, [])
 
-  // Load tasks on mount
   useEffect(() => {
     try {
       TaskStorage.migrateOldData()
       const storedTasks = TaskStorage.getTasks()
       setTasks(storedTasks)
+      console.log("[TaskContext] Tasks loaded from storage:", storedTasks.length)
     } catch (error) {
-      console.error("Failed to load tasks:", error)
+      console.error("[TaskContext] Failed to load tasks:", error)
     } finally {
       setIsLoading(false)
     }
   }, [])
 
-  // Save tasks whenever they change
   useEffect(() => {
     if (!isLoading) {
       TaskStorage.setTasks(tasks)
     }
   }, [tasks, isLoading])
 
-  // Check for date changes periodically
   useEffect(() => {
     const interval = setInterval(() => {
       const newToday = getTodayDateString()
       if (newToday !== effectiveDate) {
+        console.log(`[TaskContext] Date changed from ${effectiveDate} to ${newToday}`)
         setEffectiveDate(newToday)
       }
     }, 30000)
@@ -57,40 +58,66 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [effectiveDate])
 
   const requestNotificationPermission = useCallback(async () => {
+    console.log("[TaskContext] requestNotificationPermission called.")
     if (typeof window === "undefined" || !("Notification" in window)) {
       alert("This browser does not support desktop notifications.")
+      console.log("[TaskContext] Notifications not supported by this browser.")
       return "denied" as NotificationPermission
     }
-    if (Notification.permission === "granted") {
+    const currentPermission = Notification.permission
+    console.log("[TaskContext] Current Notification.permission before request:", currentPermission)
+
+    if (currentPermission === "granted") {
       setNotificationPermission("granted")
+      console.log("[TaskContext] Permission already granted.")
       return "granted" as NotificationPermission
     }
-    if (Notification.permission === "denied") {
+    if (currentPermission === "denied") {
       alert(
         "Notification permission was previously denied. Please enable it in your browser settings if you want alarms.",
       )
       setNotificationPermission("denied")
+      console.log("[TaskContext] Permission previously denied by user.")
       return "denied" as NotificationPermission
     }
 
+    // Only request if 'default'
     const permission = await Notification.requestPermission()
+    console.log("[TaskContext] Notification.requestPermission() result:", permission)
     setNotificationPermission(permission)
     if (permission === "denied") {
       alert("Notifications permission denied. You won't receive alarm alerts.")
+    } else if (permission === "granted") {
+      console.log("[TaskContext] Notification permission granted by user.")
     }
     return permission
   }, [])
 
-  // Alarm checking logic
   useEffect(() => {
+    console.log(
+      `[TaskContext Effect: Alarm Check] Initializing. Permission: ${notificationPermission}, isLoading: ${isLoading}`,
+    )
+
     if (notificationPermission !== "granted" || isLoading) {
-      return // Don't check alarms if permission isn't granted or tasks are loading
+      console.log(
+        `[TaskContext Effect: Alarm Check] Conditions not met (Permission: ${notificationPermission}, isLoading: ${isLoading}). Returning.`,
+      )
+      return
     }
 
+    console.log("[TaskContext Effect: Alarm Check] Setting up alarm check interval (20s).")
     const alarmCheckInterval = setInterval(() => {
       const now = new Date()
       const currentDateStr = format(now, "yyyy-MM-dd")
       const currentTimeStr = format(now, "HH:mm")
+      console.log(
+        `--- Alarm Check Tick (${new Date().toLocaleTimeString()}) --- EffectiveDate: ${currentDateStr}, CurrentTime: ${currentTimeStr}`,
+      )
+
+      if (!tasks || tasks.length === 0) {
+        // console.log("No tasks to check for alarms.")
+        return
+      }
 
       tasks.forEach((task) => {
         if (
@@ -99,34 +126,60 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           task.targetDate === currentDateStr &&
           task.alarmTime === currentTimeStr
         ) {
+          console.log(
+            `%cMATCH FOUND for task: "${task.text}" (Target: ${task.targetDate} ${task.alarmTime})`,
+            "color: green; font-weight: bold;",
+          )
           const alarmFiredKey = `alarm_fired_${task.id}_${task.targetDate}_${task.alarmTime}`
+
           if (sessionStorage.getItem(alarmFiredKey)) {
-            return // Alarm already fired for this task at this time in this session
+            console.log(`Alarm for "${task.text}" (key: ${alarmFiredKey}) already fired this session. Skipping.`)
+            return
           }
 
-          console.log(`Alarm ringing for task: ${task.text}`)
-          // Ensure placeholder-logo.png is in public folder or use a valid path
-          const notification = new Notification(`Today App: ${task.text}`, {
-            body: `It's time for your task!`,
-            icon: "/placeholder-logo.png", // Make sure this icon exists in /public
-            vibrate: [200, 100, 200], // A simple vibration pattern
-            tag: task.id, // Use task ID as tag to prevent multiple notifications for the same task if logic re-runs quickly
-          })
+          console.log(`Attempting to show notification for: "${task.text}"`)
+          try {
+            const notification = new Notification(`Today App: ${task.text}`, {
+              body: `It's time for your task!`,
+              icon: "/placeholder-logo.png",
+              vibrate: [200, 100, 200],
+              tag: task.id, // Using task ID as tag helps replace old notification if logic fires fast
+            })
 
-          notification.onclick = () => {
-            window.focus() // Focus the tab when notification is clicked
-            // Potentially navigate to the task or open details
+            notification.onshow = () => {
+              console.log(`Notification SHOWN for "${task.text}"`)
+            }
+            notification.onclick = () => {
+              console.log(`Notification CLICKED for "${task.text}"`)
+              window.focus()
+            }
+            notification.onerror = (event) => {
+              console.error(`Notification ERROR for "${task.text}":`, event)
+            }
+            notification.onclose = () => {
+              console.log(`Notification CLOSED for "${task.text}"`)
+            }
+
+            console.log(`Notification object created for "${task.text}". Waiting for onshow/onerror...`)
+
+            sessionStorage.setItem(alarmFiredKey, "true")
+            console.log(`Marked alarm as fired in session storage for "${task.text}" (Key: ${alarmFiredKey})`)
+            setTimeout(() => {
+              sessionStorage.removeItem(alarmFiredKey)
+              // console.log(`Cleared session storage key ${alarmFiredKey} after timeout.`);
+            }, 65 * 1000) // Clear after 65 seconds
+          } catch (e) {
+            console.error(`Error creating notification for "${task.text}":`, e)
           }
-
-          sessionStorage.setItem(alarmFiredKey, "true")
-          // Auto-clear this session storage item after 65 seconds to allow re-notification if app is kept open and time passes
-          setTimeout(() => sessionStorage.removeItem(alarmFiredKey), 65 * 1000)
         }
       })
-    }, 20 * 1000) // Check every 20 seconds
+    }, 20 * 1000)
 
-    return () => clearInterval(alarmCheckInterval)
-  }, [tasks, notificationPermission, isLoading])
+    return () => {
+      console.log("[TaskContext Effect: Alarm Check] Clearing alarm check interval.")
+      clearInterval(alarmCheckInterval)
+    }
+  }, [tasks, notificationPermission, isLoading]) // Removed effectiveDate as it's not directly used in this effect's logic that depends on it.
 
   const addTask = useCallback((text: string, targetDate: string) => {
     const newTask: Task = {
@@ -135,8 +188,6 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       targetDate,
       completed: false,
       createdAt: new Date().toISOString(),
-      notes: "",
-      subTasks: [],
     }
     setTasks((prevTasks) => [...prevTasks, newTask])
   }, [])
@@ -178,10 +229,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return tasks
         .filter((task) => {
           const taskCategory = getDueCategory(task.targetDate, effectiveDate)
-          if (category === "today") {
-            return taskCategory === "today"
-          }
-          return taskCategory === category
+          return category === "today" ? taskCategory === "today" : taskCategory === category
         })
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     },
@@ -194,7 +242,6 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const closeDetailsModal = useCallback(() => setTaskForDetails(null), [])
   const openDeleteConfirm = useCallback((taskId: string) => setTaskToDeleteId(taskId), [])
   const closeDeleteConfirm = useCallback(() => setTaskToDeleteId(null), [])
-
   const exportTasks = useCallback(() => JSON.stringify(tasks, null, 2), [tasks])
   const importTasks = useCallback((tasksJson: string) => {
     try {

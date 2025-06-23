@@ -17,8 +17,8 @@ const TaskFunctionsModal: React.FC = () => {
     updateTaskTargetDate,
     updateTaskDetails,
     effectiveDate,
-    notificationPermission, // Get current permission status
-    requestNotificationPermission, // Get function to request permission
+    notificationPermission,
+    requestNotificationPermission,
   } = useTasks()
   const [selectedAlarmTime, setSelectedAlarmTime] = useState<string>("")
 
@@ -30,52 +30,60 @@ const TaskFunctionsModal: React.FC = () => {
     }
   }, [taskForFunctions])
 
-  if (!taskForFunctions) {
-    return null
-  }
+  if (!taskForFunctions) return null
 
   const handleReassign = (category: "today" | "tomorrow" | "next3days") => {
     const newTargetDate = getTargetDateForCategory(category, effectiveDate)
     updateTaskTargetDate(taskForFunctions.id, newTargetDate)
-    // updateTaskTargetDate already closes the modal
   }
 
   const handleSaveAlarm = async () => {
-    if (!selectedAlarmTime) {
-      // If clearing alarm by setting empty time, just update
-      updateTaskDetails(taskForFunctions.id, { alarmTime: null })
+    console.log(
+      `[TaskFunctionsModal] handleSaveAlarm called. Selected time: "${selectedAlarmTime}" for task: "${taskForFunctions.text}"`,
+    )
+
+    if (!selectedAlarmTime && !taskForFunctions.alarmTime) {
+      console.log("[TaskFunctionsModal] No new alarm time set and no existing alarm. Closing.")
       closeTaskFunctionsModal()
       return
     }
 
-    let currentPermission = notificationPermission
+    let currentBrowserPermission = notificationPermission
     if (typeof window !== "undefined" && "Notification" in window) {
-      currentPermission = Notification.permission // Get the most up-to-date permission
+      currentBrowserPermission = Notification.permission // Get the most up-to-date permission directly from browser
+      console.log("[TaskFunctionsModal] Current Notification.permission from browser:", currentBrowserPermission)
     }
 
-    if (currentPermission === "default") {
+    // Only request permission if a new alarm time is being set
+    if (selectedAlarmTime && currentBrowserPermission === "default") {
+      console.log("[TaskFunctionsModal] Permission is 'default', attempting to request...")
       const permissionResult = await requestNotificationPermission()
+      console.log("[TaskFunctionsModal] Permission request result:", permissionResult)
       if (permissionResult !== "granted") {
-        // User denied or dismissed, still save alarm time but they won't get a notification
-        updateTaskDetails(taskForFunctions.id, { alarmTime: selectedAlarmTime })
-        closeTaskFunctionsModal()
-        return
+        console.log(
+          "[TaskFunctionsModal] Permission not granted after request. Alarm time will be saved, but no OS notification will occur.",
+        )
+        // Alert or inform user that notifications won't work but time is saved
+        alert("Alarm time saved, but notifications won't show as permission was not granted.")
       }
-    } else if (currentPermission === "denied") {
+    } else if (selectedAlarmTime && currentBrowserPermission === "denied") {
+      console.log("[TaskFunctionsModal] Permission is 'denied'. Alerting user.")
       alert(
-        "Notifications are disabled. Please enable them in browser settings for alarms to work. Alarm time will be saved.",
+        "Notifications are disabled for this site. Please enable them in your browser settings for alarms to work. Alarm time will be saved.",
       )
     }
 
-    updateTaskDetails(taskForFunctions.id, { alarmTime: selectedAlarmTime })
+    console.log(
+      `[TaskFunctionsModal] Updating task details with alarmTime: "${selectedAlarmTime || null}" for task ID: ${taskForFunctions.id}`,
+    )
+    updateTaskDetails(taskForFunctions.id, { alarmTime: selectedAlarmTime || null })
     closeTaskFunctionsModal()
   }
 
   const handleClearAlarm = () => {
-    updateTaskDetails(taskForFunctions.id, { alarmTime: null })
+    console.log(`[TaskFunctionsModal] handleClearAlarm called for task: "${taskForFunctions.text}"`)
     setSelectedAlarmTime("")
-    // Optionally close modal or keep it open if user might want to set a new time
-    // closeTaskFunctionsModal(); // Let's keep it open for now
+    // updateTaskDetails(taskForFunctions.id, { alarmTime: null }); // This will be handled by Save if user confirms
   }
 
   const dueOptions: { label: string; category: DueCategory }[] = [
@@ -117,7 +125,6 @@ const TaskFunctionsModal: React.FC = () => {
               ))}
             </div>
           </div>
-
           <div>
             <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2 flex items-center gap-2">
               <Clock size={16} /> Set Alarm
@@ -130,30 +137,31 @@ const TaskFunctionsModal: React.FC = () => {
                 className="flex-grow"
                 aria-label="Set alarm time"
               />
-              <Button
-                onClick={handleSaveAlarm}
-                disabled={!selectedAlarmTime && !taskForFunctions.alarmTime}
-                className="shrink-0"
-              >
-                {selectedAlarmTime ? "Set" : "Save"}
+              <Button onClick={handleSaveAlarm} className="shrink-0">
+                {selectedAlarmTime ? "Set Alarm" : taskForFunctions.alarmTime ? "Update Alarm" : "Save Time"}
               </Button>
               <Button
                 onClick={handleClearAlarm}
                 variant="outline"
-                disabled={!taskForFunctions.alarmTime && !selectedAlarmTime}
+                disabled={!selectedAlarmTime && !taskForFunctions.alarmTime}
                 className="shrink-0"
               >
-                Clear
+                Clear Time
               </Button>
             </div>
-            {taskForFunctions.alarmTime && (
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 text-center sm:text-left">
-                Current alarm: {taskForFunctions.alarmTime}
+            {taskForFunctions.alarmTime && !selectedAlarmTime && (
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
+                Current alarm set for: {taskForFunctions.alarmTime}
+              </p>
+            )}
+            {selectedAlarmTime && (
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                New alarm time will be: {selectedAlarmTime} (Click "Set Alarm" to save)
               </p>
             )}
             {notificationPermission === "denied" && (
               <p className="text-xs text-red-500 mt-2">
-                Notifications are disabled in your browser settings. Alarms won't be shown.
+                Browser notifications are disabled. Alarms will be saved but not shown.
               </p>
             )}
           </div>
