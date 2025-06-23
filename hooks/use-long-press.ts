@@ -35,22 +35,15 @@ export const useLongPress = (
 
       // Only set timeout if not already cancelled by condition
       if (!cancelCondition) {
-        // CRITICAL CHECK: Don't start long press if already cancelled
         timeout.current = setTimeout(() => {
-          // Double check cancelCondition here too, in case it changed just before timeout fires
           if (!cancelCondition) {
-            // CRITICAL CHECK: Don't fire if condition became true
             onLongPress(event)
             setLongPressTriggered(true)
-          } else {
-            console.log("Long press cancelled by condition before timeout fired.")
           }
         }, delay)
-      } else {
-        console.log("Long press start prevented by condition.")
       }
     },
-    [onLongPress, delay, shouldPreventDefault, cancelCondition], // Add cancelCondition to dependencies
+    [onLongPress, delay, shouldPreventDefault, cancelCondition],
   )
 
   const clear = useCallback(
@@ -95,7 +88,6 @@ export const useLongPress = (
           clearTimeout(timeout.current)
           setLongPressTriggered(false) // Ensure long press is not triggered
           startCoords.current = null // Reset coordinates
-          console.log("Long press cancelled due to movement.")
         }
       }
     },

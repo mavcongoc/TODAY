@@ -25,27 +25,21 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
   }
 
   const handleCheckboxClick = (e: React.MouseEvent) => {
-    // Stop propagation to prevent triggering parent handlers
     e.stopPropagation()
     toggleTaskCompletion(task.id)
   }
 
-  const handleCheckboxChange = (checked: boolean) => {
-    // This is called by the Checkbox component itself
+  const handleCheckboxChange = () => {
     toggleTaskCompletion(task.id)
   }
 
   const handleLongPress = () => {
-    // This check is now redundant because cancelCondition handles it in useLongPress
-    // if (isTaskSwiping) return;
-    console.log("Long press triggered for:", task.text)
     openReassignModal(task)
   }
 
-  // Pass isTaskSwiping as the cancelCondition to prevent long press during a swipe
   const longPressEvents = useLongPress(handleLongPress, handleTaskTextClick, {
     delay: 500,
-    cancelCondition: isTaskSwiping, // CRITICAL: Pass the swiping state here
+    cancelCondition: isTaskSwiping, // Prevent long press if swipe is active
   })
 
   const resetSwipe = () => {
@@ -53,61 +47,32 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
     setIsTaskSwiping(false)
   }
 
-  // Task-level swipe handlers with aggressive event stopping
   const taskSwipeHandlers = useSwipeable({
     onSwipeStart: (eventData) => {
-      console.log("Task swipe started")
-      setIsTaskSwiping(true) // Set swiping state immediately
-      // Stop the event from reaching parent handlers
+      setIsTaskSwiping(true)
       eventData.event.stopPropagation()
-      if (eventData.event.cancelable) {
-        eventData.event.preventDefault()
-      }
     },
     onSwiping: (eventData) => {
-      console.log("Task swiping:", eventData.deltaX)
-      // Stop the event from reaching parent handlers
       eventData.event.stopPropagation()
-      if (eventData.event.cancelable) {
-        eventData.event.preventDefault()
-      }
-
-      // Only handle horizontal swipes
       if (Math.abs(eventData.deltaY) > Math.abs(eventData.deltaX)) {
         return
       }
-
-      // Limit the swipe offset
       let offset = eventData.deltaX
       if (offset > 100) offset = 100
       if (offset < -100) offset = -100
-
       setSwipeOffset(offset)
     },
     onSwiped: (eventData) => {
-      console.log("Task swiped:", eventData.dir, "Delta:", eventData.deltaX)
-
-      // Stop the event from reaching parent handlers
       eventData.event.stopPropagation()
-      if (eventData.event.cancelable) {
-        eventData.event.preventDefault()
-      }
-
       const threshold = 60
-
       if (eventData.dir === "Left" && Math.abs(eventData.deltaX) > threshold) {
-        console.log("Opening delete confirm for:", task.text)
         openDeleteConfirm(task.id)
       } else if (eventData.dir === "Right" && Math.abs(eventData.deltaX) > threshold) {
-        console.log("Opening details modal for:", task.text)
         openDetailsModal(task)
       }
-
-      // Reset after a short delay to allow the action to process
       setTimeout(resetSwipe, 100)
     },
     onSwipeCancel: () => {
-      console.log("Task swipe cancelled")
       resetSwipe()
     },
     preventScrollOnSwipe: true,
@@ -120,9 +85,8 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
 
   return (
     <div
-      className="relative bg-white overflow-hidden border-b border-neutral-200 select-none touch-manipulation no-select"
+      className="relative bg-white overflow-hidden border-b border-neutral-200 select-none touch-manipulation"
       data-task-item="true"
-      style={{ touchAction: "pan-y" }} // Allow vertical scrolling but capture horizontal swipes
     >
       {/* Visual feedback during swipe */}
       <div
@@ -148,18 +112,16 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
         )}
         style={{ transform: `translateX(${swipeOffset}px)` }}
       >
-        {/* Checkbox Area - Isolated interaction */}
         <div className="shrink-0 p-1 -m-1 cursor-pointer rounded hover:bg-neutral-100" onClick={handleCheckboxClick}>
           <Checkbox
             id={`task-${task.id}`}
             checked={task.completed}
             onCheckedChange={handleCheckboxChange}
-            className="w-5 h-5 rounded pointer-events-none" // Disable pointer events on checkbox itself
+            className="w-5 h-5 rounded pointer-events-none"
             aria-labelledby={`task-text-${task.id}`}
           />
         </div>
 
-        {/* Text Area - Has long press and click handlers */}
         <div
           {...longPressEvents}
           className="flex-grow cursor-pointer"
@@ -181,7 +143,6 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
           </p>
         </div>
 
-        {/* More Info Icon */}
         {hasMoreInfo && <ListChecks size={18} className="text-neutral-400 shrink-0" />}
       </div>
     </div>
