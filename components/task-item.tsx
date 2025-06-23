@@ -39,7 +39,6 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
 
   const longPressEvents = useLongPress(handleLongPress, handleTaskTextClick, {
     delay: 500,
-    cancelCondition: isTaskSwiping, // Prevent long press if swipe is active
   })
 
   const resetSwipe = () => {

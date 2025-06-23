@@ -1,112 +1,92 @@
 "use client"
 
-import type React from "react"
+import { useCallback, useRef, type MouseEvent, type TouchEvent } from "react"
 
-import { useCallback, useRef, useState } from "react"
-
-interface LongPressOptions {
-  shouldPreventDefault?: boolean
-  delay?: number
-  moveThreshold?: number // Pixels before cancelling long press
-  cancelCondition?: boolean // NEW: Condition to cancel long press (e.g., if a swipe is active)
+// Default options
+const defaultOptions = {
+  shouldPreventDefault: true,
+  delay: 300,
+  moveThreshold: 10, // Cancel long press if pointer moves more than 10px
 }
 
-export const useLongPress = (
-  onLongPress: (event: React.TouchEvent | React.MouseEvent) => void,
-  onClick?: (event: React.TouchEvent | React.MouseEvent) => void,
-  { shouldPreventDefault = true, delay = 300, moveThreshold = 10, cancelCondition = false }: LongPressOptions = {},
+type LongPressEvent<T> = MouseEvent<T> | TouchEvent<T>
+
+export const useLongPress = <T extends HTMLElement>(
+  onLongPress: (event: LongPressEvent<T>) => void,
+  onClick?: (event: LongPressEvent<T>) => void,
+  options: Partial<typeof defaultOptions> = {},
 ) => {
-  const [longPressTriggered, setLongPressTriggered] = useState(false)
+  const { shouldPreventDefault, delay, moveThreshold } = { ...defaultOptions, ...options }
   const timeout = useRef<NodeJS.Timeout>()
-  const target = useRef<EventTarget>()
   const startCoords = useRef<{ x: number; y: number } | null>(null)
+  const isLongPress = useRef(false)
+  const isPressed = useRef(false)
 
   const start = useCallback(
-    (event: React.TouchEvent | React.MouseEvent) => {
-      if (shouldPreventDefault && event.target) {
-        event.target.addEventListener("touchend", preventDefault, { passive: false })
-        target.current = event.target
-      }
+    (event: LongPressEvent<T>) => {
+      // Prevent multiple start triggers
+      if (isPressed.current) return
 
-      // Store initial coordinates
-      const clientX = "touches" in event ? event.touches[0].clientX : event.clientX
-      const clientY = "touches" in event ? event.touches[0].clientY : event.clientY
+      const { clientX, clientY } = "touches" in event ? event.touches[0] : event
       startCoords.current = { x: clientX, y: clientY }
+      isPressed.current = true
 
-      // Only set timeout if not already cancelled by condition
-      if (!cancelCondition) {
-        timeout.current = setTimeout(() => {
-          if (!cancelCondition) {
-            onLongPress(event)
-            setLongPressTriggered(true)
-          }
-        }, delay)
-      }
+      timeout.current = setTimeout(() => {
+        onLongPress(event)
+        isLongPress.current = true
+      }, delay)
     },
-    [onLongPress, delay, shouldPreventDefault, cancelCondition],
+    [onLongPress, delay],
   )
 
-  const clear = useCallback(
-    (event: React.TouchEvent | React.MouseEvent, shouldTriggerClick = true) => {
-      timeout.current && clearTimeout(timeout.current)
+  const cancel = useCallback(() => {
+    if (timeout.current) {
+      clearTimeout(timeout.current)
+    }
+    isPressed.current = false
+    isLongPress.current = false
+    startCoords.current = null
+  }, [])
 
-      // Check if significant movement occurred
-      const moved =
-        startCoords.current &&
-        (Math.abs(
-          ("changedTouches" in event ? event.changedTouches[0].clientX : event.clientX) - startCoords.current.x,
-        ) > moveThreshold ||
-          Math.abs(
-            ("changedTouches" in event ? event.changedTouches[0].clientY : event.clientY) - startCoords.current.y,
-          ) > moveThreshold)
-
-      // Only trigger click if long press wasn't triggered AND no significant movement occurred
-      if (shouldTriggerClick && !longPressTriggered && !moved) {
-        onClick?.(event)
-      }
-
-      setLongPressTriggered(false)
-      startCoords.current = null // Reset coordinates
-      if (shouldPreventDefault && target.current) {
-        target.current.removeEventListener("touchend", preventDefault)
-      }
-    },
-    [shouldPreventDefault, onClick, longPressTriggered, moveThreshold],
-  )
-
-  // Handler for touch/mouse move to cancel long press if movement occurs
   const handleMove = useCallback(
-    (event: React.TouchEvent | React.MouseEvent) => {
-      if (timeout.current && startCoords.current) {
-        const clientX = "touches" in event ? event.touches[0].clientX : event.clientX
-        const clientY = "touches" in event ? event.touches[0].clientY : event.clientY
-
+    (event: LongPressEvent<T>) => {
+      if (isPressed.current && startCoords.current) {
+        const { clientX, clientY } = "touches" in event ? event.touches[0] : event
         const deltaX = Math.abs(clientX - startCoords.current.x)
         const deltaY = Math.abs(clientY - startCoords.current.y)
 
         if (deltaX > moveThreshold || deltaY > moveThreshold) {
-          clearTimeout(timeout.current)
-          setLongPressTriggered(false) // Ensure long press is not triggered
-          startCoords.current = null // Reset coordinates
+          // Movement detected, cancel the long press
+          cancel()
         }
       }
     },
-    [moveThreshold],
+    [moveThreshold, cancel],
   )
 
-  const preventDefault = (event: Event) => {
-    if (event.cancelable) {
-      event.preventDefault()
-    }
-  }
+  const end = useCallback(
+    (event: LongPressEvent<T>) => {
+      if (isPressed.current) {
+        if (shouldPreventDefault && isLongPress.current) {
+          event.preventDefault()
+        }
+
+        if (onClick && !isLongPress.current) {
+          onClick(event)
+        }
+      }
+      cancel()
+    },
+    [onClick, shouldPreventDefault, cancel],
+  )
 
   return {
-    onMouseDown: (e: React.MouseEvent) => start(e),
-    onTouchStart: (e: React.TouchEvent) => start(e),
-    onMouseUp: (e: React.MouseEvent) => clear(e),
-    onMouseLeave: (e: React.MouseEvent) => clear(e, false),
-    onTouchEnd: (e: React.TouchEvent) => clear(e),
-    onMouseMove: (e: React.MouseEvent) => handleMove(e),
-    onTouchMove: (e: React.TouchEvent) => handleMove(e),
+    onMouseDown: start as (e: MouseEvent<T>) => void,
+    onTouchStart: start as (e: TouchEvent<T>) => void,
+    onMouseUp: end as (e: MouseEvent<T>) => void,
+    onTouchEnd: end as (e: TouchEvent<T>) => void,
+    onMouseMove: handleMove as (e: MouseEvent<T>) => void,
+    onTouchMove: handleMove as (e: TouchEvent<T>) => void,
+    onMouseLeave: cancel,
   }
 }

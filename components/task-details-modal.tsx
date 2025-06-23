@@ -17,8 +17,6 @@ const TaskDetailsModal: React.FC = () => {
   const [subTasks, setSubTasks] = useState<SubTask[]>([])
   const [newSubTaskText, setNewSubTaskText] = useState("")
 
-  console.log("TaskDetailsModal render - taskForDetails:", taskForDetails) // Add this line
-
   useEffect(() => {
     if (taskForDetails) {
       setNotes(taskForDetails.notes || "")
@@ -55,12 +53,12 @@ const TaskDetailsModal: React.FC = () => {
 
   return (
     <Dialog open={!!taskForDetails} onOpenChange={(isOpen) => !isOpen && closeDetailsModal()}>
-      <DialogContent className="sm:max-w-lg mx-4">
-        <DialogHeader>
-          <DialogTitle>Task Details</DialogTitle>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-lg mx-auto sm:mx-auto rounded-lg">
+        <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6 text-left">
+          <DialogTitle className="text-lg sm:text-xl">Task Details</DialogTitle>
           <p className="text-sm text-neutral-500 truncate pt-1">{taskForDetails.text}</p>
         </DialogHeader>
-        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+        <div className="px-4 pb-4 sm:px-6 sm:pb-6 space-y-4 max-h-[60vh] sm:max-h-[70vh] overflow-y-auto">
           <div>
             <label htmlFor="task-notes" className="block text-sm font-medium text-neutral-700 mb-1">
               Notes
@@ -70,23 +68,27 @@ const TaskDetailsModal: React.FC = () => {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add any notes for this task..."
-              rows={4}
-              className="focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={3} // Adjusted for mobile
+              className="w-full focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
             <h3 className="text-sm font-medium text-neutral-700 mb-2">Sub-tasks</h3>
             <div className="space-y-2 mb-3">
               {subTasks.map((subTask) => (
-                <div key={subTask.id} className="flex items-center gap-2 p-2 bg-neutral-50 rounded">
+                <div
+                  key={subTask.id}
+                  className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-md"
+                >
                   <Checkbox
                     id={`subtask-${subTask.id}`}
                     checked={subTask.completed}
                     onCheckedChange={() => handleToggleSubTask(subTask.id)}
+                    className="shrink-0"
                   />
                   <label
                     htmlFor={`subtask-${subTask.id}`}
-                    className={`flex-grow text-sm ${subTask.completed ? "line-through text-neutral-500" : "text-neutral-800"}`}
+                    className={`flex-grow text-sm ${subTask.completed ? "line-through text-neutral-500 dark:text-neutral-400" : "text-neutral-800 dark:text-neutral-100"}`}
                   >
                     {subTask.text}
                   </label>
@@ -95,8 +97,9 @@ const TaskDetailsModal: React.FC = () => {
                     size="icon"
                     onClick={() => handleDeleteSubTask(subTask.id)}
                     aria-label="Delete sub-task"
+                    className="shrink-0 h-7 w-7 sm:h-8 sm:w-8"
                   >
-                    <Trash2 size={16} className="text-neutral-500 hover:text-red-500" />
+                    <Trash2 size={14} sm:size={16} className="text-neutral-500 hover:text-red-500" />
                   </Button>
                 </div>
               ))}
@@ -107,23 +110,31 @@ const TaskDetailsModal: React.FC = () => {
                 value={newSubTaskText}
                 onChange={(e) => setNewSubTaskText(e.target.value)}
                 placeholder="Add a new sub-task"
-                className="flex-grow focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:border-blue-500"
+                className="flex-grow w-full focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:border-blue-500"
                 onKeyPress={(e) => e.key === "Enter" && handleAddSubTask()}
               />
-              <Button onClick={handleAddSubTask} size="icon" variant="outline" aria-label="Add sub-task">
-                <PlusCircle size={20} />
+              <Button
+                onClick={handleAddSubTask}
+                size="icon"
+                variant="outline"
+                aria-label="Add sub-task"
+                className="shrink-0 h-9 w-9 sm:h-10 sm:w-10"
+              >
+                <PlusCircle size={18} sm:size={20} />
               </Button>
             </div>
-            {subTasks.length === 0 && <p className="text-xs text-neutral-400 mt-2">No sub-tasks yet.</p>}
+            {subTasks.length === 0 && (
+              <p className="text-xs text-neutral-400 mt-2 text-center sm:text-left">No sub-tasks yet.</p>
+            )}
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="px-4 pb-4 sm:px-6 sm:pb-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <DialogClose asChild>
-            <Button type="button" variant="outline">
+            <Button type="button" variant="outline" className="w-full sm:w-auto">
               Cancel
             </Button>
           </DialogClose>
-          <Button type="button" onClick={handleSave}>
+          <Button type="button" onClick={handleSave} className="w-full sm:w-auto">
             Save Details
           </Button>
         </DialogFooter>
