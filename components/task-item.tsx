@@ -44,9 +44,9 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
     openReassignModal(task)
   }
 
-  const longPressEvents = useLongPress(handleLongPress, handleTaskTextClick, {
+  const { handlers: longPressHandlers, cancel: cancelLongPress } = useLongPress(handleLongPress, handleTaskTextClick, {
     delay: 500,
-    moveThreshold: 8, // Slightly more sensitive to catch swipes earlier
+    moveThreshold: 5,
   })
 
   const resetSwipe = () => {
@@ -57,6 +57,8 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
   const taskSwipeHandlers = useSwipeable({
     onSwipeStart: (eventData) => {
       console.log("Swipe started:", eventData.dir)
+      // Immediately cancel long press when any swipe starts
+      cancelLongPress()
       setIsTaskSwiping(true)
       eventData.event.stopPropagation()
     },
@@ -78,7 +80,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
       console.log("Swipe completed:", eventData.dir, "deltaX:", eventData.deltaX)
       eventData.event.stopPropagation()
 
-      const threshold = 50 // Reduced threshold to make swipes more responsive
+      const threshold = 50
 
       if (eventData.dir === "Left" && Math.abs(eventData.deltaX) > threshold) {
         console.log("Triggering delete confirm")
@@ -98,7 +100,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
     preventScrollOnSwipe: true,
     trackMouse: true,
     trackTouch: true,
-    delta: 8, // Reduced to match useLongPress moveThreshold for consistency
+    delta: 5, // Very sensitive to detect swipes early
   })
 
   const hasMoreInfo = (task.notes && task.notes.trim() !== "") || (task.subTasks && task.subTasks.length > 0)
@@ -132,7 +134,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
 
       {/* Task Item Content */}
       <div
-        {...longPressEvents}
+        {...longPressHandlers}
         {...taskSwipeHandlers}
         className={cn(
           "flex items-center gap-3 p-4 bg-white dark:bg-neutral-800 transition-transform duration-150 ease-out",
