@@ -14,6 +14,7 @@ export interface Task {
   createdAt: string // ISO string for timestamp
   notes?: string
   subTasks?: SubTask[]
+  alarmTime?: string // HH:mm format for alarm
 }
 
 export interface TaskContextType {
@@ -22,13 +23,13 @@ export interface TaskContextType {
   toggleTaskCompletion: (id: string) => void
   updateTaskTargetDate: (id: string, newTargetDate: string) => void
   deleteTask: (id: string) => void
-  updateTaskDetails: (id: string, details: { notes?: string; subTasks?: SubTask[] }) => void
+  updateTaskDetails: (id: string, details: { notes?: string; subTasks?: SubTask[]; alarmTime?: string | null }) => void
   getTasksForCategory: (category: DueCategory) => Task[]
 
-  // For DueDateReassignModal
-  openReassignModal: (task: Task) => void
-  closeReassignModal: () => void
-  taskToReassign: Task | null
+  // For TaskFunctionsModal (formerly DueDateReassignModal)
+  openTaskFunctionsModal: (task: Task) => void
+  closeTaskFunctionsModal: () => void
+  taskForFunctions: Task | null // Renamed from taskToReassign
 
   // For TaskDetailsModal
   openDetailsModal: (task: Task) => void

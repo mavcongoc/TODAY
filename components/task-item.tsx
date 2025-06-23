@@ -15,39 +15,39 @@ interface TaskItemProps {
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
-  const { toggleTaskCompletion, openReassignModal, openDetailsModal, openDeleteConfirm } = useTasks()
+  const { toggleTaskCompletion, openTaskFunctionsModal, openDetailsModal, openDeleteConfirm } = useTasks() // Renamed openReassignModal
   const [swipeOffset, setSwipeOffset] = useState(0)
   const [isTaskSwiping, setIsTaskSwiping] = useState(false)
 
-  const handleTaskTextClick = () => {
+  // This function is now only for the task text area, and it opens the functions modal
+  const handleTaskTextClickOrLongPress = () => {
     if (isTaskSwiping) {
-      console.log("TaskItem: Click ignored due to active swipe.")
+      console.log("TaskItem: Click/Long press ignored due to active swipe.")
       return
     }
-    toggleTaskCompletion(task.id)
+    openTaskFunctionsModal(task) // Open the new TaskFunctionsModal
   }
 
+  // This function is ONLY for the checkbox
   const handleCheckboxClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
+    e.stopPropagation() // Prevent this click from bubbling to the long press/swipe div
     toggleTaskCompletion(task.id)
   }
 
+  // This function is ONLY for the checkbox
   const handleCheckboxChange = () => {
     toggleTaskCompletion(task.id)
   }
 
-  const handleLongPress = () => {
-    if (isTaskSwiping) {
-      console.log("TaskItem: Long press ignored due to active swipe.")
-      return
-    }
-    openReassignModal(task)
-  }
-
-  const { handlers: longPressHandlers, cancel: cancelLongPress } = useLongPress(handleLongPress, handleTaskTextClick, {
-    delay: 500,
-    moveThreshold: 5,
-  })
+  // useLongPress will now trigger handleTaskTextClickOrLongPress for both short tap and long press
+  const { handlers: longPressHandlers, cancel: cancelLongPress } = useLongPress(
+    handleTaskTextClickOrLongPress, // What happens on long press
+    handleTaskTextClickOrLongPress, // What happens on short click/tap
+    {
+      delay: 500,
+      moveThreshold: 5,
+    },
+  )
 
   const resetSwipe = () => {
     setSwipeOffset(0)
@@ -57,21 +57,18 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
   const taskSwipeHandlers = useSwipeable({
     onSwipeStart: (eventData) => {
       console.log("Swipe started:", eventData.dir)
-      // Immediately cancel long press when any swipe starts
-      cancelLongPress()
+      cancelLongPress() // Immediately cancel long press when any swipe starts
       setIsTaskSwiping(true)
       eventData.event.stopPropagation()
     },
     onSwiping: (eventData) => {
       eventData.event.stopPropagation()
 
-      // Prioritize horizontal movement over vertical
       if (Math.abs(eventData.deltaY) > Math.abs(eventData.deltaX)) {
-        return
+        return // Prioritize vertical scroll
       }
 
       let offset = eventData.deltaX
-      // Limit swipe offset for visual feedback
       if (offset > 100) offset = 100
       if (offset < -100) offset = -100
       setSwipeOffset(offset)
@@ -90,7 +87,6 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
         openDetailsModal(task)
       }
 
-      // Reset swipe state after a short delay
       setTimeout(resetSwipe, 150)
     },
     onSwipeCancel: (eventData) => {
@@ -100,7 +96,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
     preventScrollOnSwipe: true,
     trackMouse: true,
     trackTouch: true,
-    delta: 5, // Very sensitive to detect swipes early
+    delta: 5,
   })
 
   const hasMoreInfo = (task.notes && task.notes.trim() !== "") || (task.subTasks && task.subTasks.length > 0)
@@ -134,7 +130,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
 
       {/* Task Item Content */}
       <div
-        {...longPressHandlers}
+        {...longPressHandlers} // Handles both long press and short tap for opening TaskFunctionsModal
         {...taskSwipeHandlers}
         className={cn(
           "flex items-center gap-3 p-4 bg-white dark:bg-neutral-800 transition-transform duration-150 ease-out",
@@ -143,6 +139,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
         )}
         style={{ transform: `translateX(${swipeOffset}px)` }}
       >
+        {/* Checkbox Area - ONLY for toggling completion */}
         <div
           className="shrink-0 p-1 -m-1 cursor-pointer rounded hover:bg-neutral-100 dark:hover:bg-neutral-700"
           onClick={handleCheckboxClick}
@@ -151,11 +148,12 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
             id={`task-${task.id}`}
             checked={task.completed}
             onCheckedChange={handleCheckboxChange}
-            className="w-5 h-5 rounded pointer-events-none"
+            className="w-5 h-5 rounded" // Removed pointer-events-none
             aria-labelledby={`task-text-${task.id}`}
           />
         </div>
 
+        {/* Text Area - Target for long press and click (via useLongPress) */}
         <div
           className="flex-grow cursor-pointer"
           role="button"
@@ -164,7 +162,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault()
-              handleTaskTextClick()
+              handleTaskTextClickOrLongPress() // Keyboard also opens modal
             }
           }}
         >
@@ -179,6 +177,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
           </p>
         </div>
 
+        {/* More Info Icon */}
         {hasMoreInfo && <ListChecks size={18} className="text-neutral-400 dark:text-neutral-500 shrink-0" />}
       </div>
     </div>

@@ -6,7 +6,7 @@ import { TaskProvider, useTasks } from "@/contexts/task-context"
 import ViewHeader from "@/components/view-header"
 import TaskInput from "@/components/task-input"
 import TaskListContainer from "@/components/task-list-container"
-import DueDateReassignModal from "@/components/due-date-reassign-modal"
+import TaskFunctionsModal from "@/components/task-functions-modal" // Renamed import
 import TaskDetailsModal from "@/components/task-details-modal"
 import DeleteConfirmationDialog from "@/components/delete-confirmation-dialog"
 import LoadingSpinner from "@/components/loading-spinner"
@@ -68,11 +68,11 @@ function TodayAppContent() {
         isFirstView={currentViewIndex === 0}
         isLastView={currentViewIndex === views.length - 1}
       />
-      <TaskInput currentView={currentViewCategory} /> {/* Pass current view category */}
+      <TaskInput currentView={currentViewCategory} />
       <main {...pageSwipeHandlers} className="flex-grow flex flex-col overflow-hidden">
         <TaskListContainer currentViewIndex={currentViewIndex} views={views} ref={taskListRef} />
       </main>
-      <DueDateReassignModal />
+      <TaskFunctionsModal /> {/* Renamed component */}
       <TaskDetailsModal />
       <DeleteConfirmationDialog />
     </div>

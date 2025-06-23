@@ -10,7 +10,7 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined)
 
 export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [tasks, setTasks] = useState<Task[]>([])
-  const [taskToReassign, setTaskToReassign] = useState<Task | null>(null)
+  const [taskForFunctions, setTaskForFunctions] = useState<Task | null>(null) // Renamed
   const [taskForDetails, setTaskForDetails] = useState<Task | null>(null)
   const [taskToDeleteId, setTaskToDeleteId] = useState<string | null>(null)
   const [effectiveDate, setEffectiveDate] = useState<string>(getTodayDateString())
@@ -71,7 +71,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateTaskTargetDate = useCallback((id: string, newTargetDate: string) => {
     setTasks((prevTasks) => prevTasks.map((task) => (task.id === id ? { ...task, targetDate: newTargetDate } : task)))
-    setTaskToReassign(null)
+    setTaskForFunctions(null) // Close modal after update
   }, [])
 
   const deleteTask = useCallback((id: string) => {
@@ -79,19 +79,23 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setTaskToDeleteId(null)
   }, [])
 
-  const updateTaskDetails = useCallback((id: string, details: { notes?: string; subTasks?: SubTask[] }) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === id
-          ? {
-              ...task,
-              notes: details.notes !== undefined ? details.notes : task.notes,
-              subTasks: details.subTasks !== undefined ? details.subTasks : task.subTasks,
-            }
-          : task,
-      ),
-    )
-  }, [])
+  const updateTaskDetails = useCallback(
+    (id: string, details: { notes?: string; subTasks?: SubTask[]; alarmTime?: string | null }) => {
+      setTasks((prevTasks) =>
+        prevTasks.map((task) =>
+          task.id === id
+            ? {
+                ...task,
+                notes: details.notes !== undefined ? details.notes : task.notes,
+                subTasks: details.subTasks !== undefined ? details.subTasks : task.subTasks,
+                alarmTime: details.alarmTime !== undefined ? details.alarmTime : task.alarmTime,
+              }
+            : task,
+        ),
+      )
+    },
+    [],
+  )
 
   const getTasksForCategory = useCallback(
     (category: DueCategory): Task[] => {
@@ -108,8 +112,8 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [tasks, effectiveDate],
   )
 
-  const openReassignModal = useCallback((task: Task) => setTaskToReassign(task), [])
-  const closeReassignModal = useCallback(() => setTaskToReassign(null), [])
+  const openTaskFunctionsModal = useCallback((task: Task) => setTaskForFunctions(task), []) // Renamed
+  const closeTaskFunctionsModal = useCallback(() => setTaskForFunctions(null), []) // Renamed
 
   const openDetailsModal = useCallback((task: Task) => {
     setTaskForDetails(task)
@@ -150,9 +154,9 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         deleteTask,
         updateTaskDetails,
         getTasksForCategory,
-        openReassignModal,
-        closeReassignModal,
-        taskToReassign,
+        openTaskFunctionsModal, // Renamed
+        closeTaskFunctionsModal, // Renamed
+        taskForFunctions, // Renamed
         openDetailsModal,
         closeDetailsModal,
         taskForDetails,
