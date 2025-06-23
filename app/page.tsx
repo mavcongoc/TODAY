@@ -26,34 +26,23 @@ function TodayAppContent() {
   const handleSwipeLeft = () => navigateToView(currentViewIndex + 1)
   const handleSwipeRight = () => navigateToView(currentViewIndex - 1)
 
-  // Page-level swipe handlers - but we'll be more selective about when to use them
   const pageSwipeHandlers = useSwipeable({
     onSwipedLeft: (eventData) => {
-      // Only handle page swipe if the swipe didn't originate from a task item
       const target = eventData.event.target as HTMLElement
       const isTaskSwipe = target.closest("[data-task-item]")
-
-      if (!isTaskSwipe) {
-        handleSwipeLeft()
-      }
+      if (!isTaskSwipe) handleSwipeLeft()
     },
     onSwipedRight: (eventData) => {
-      // Only handle page swipe if the swipe didn't originate from a task item
       const target = eventData.event.target as HTMLElement
       const isTaskSwipe = target.closest("[data-task-item]")
-
-      if (!isTaskSwipe) {
-        handleSwipeRight()
-      }
+      if (!isTaskSwipe) handleSwipeRight()
     },
     preventScrollOnSwipe: true,
     trackMouse: true,
     trackTouch: true,
   })
 
-  // Ensure proper mobile viewport settings
   useEffect(() => {
-    // This helps prevent unwanted zooming and ensures proper rendering on mobile
     const metaViewport = document.querySelector('meta[name="viewport"]')
     if (metaViewport) {
       metaViewport.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no")
@@ -68,16 +57,18 @@ function TodayAppContent() {
     )
   }
 
+  const currentViewCategory = views[currentViewIndex]
+
   return (
     <div className="flex flex-col h-screen bg-neutral-50 text-neutral-800 antialiased">
       <ViewHeader
-        currentViewLabel={views[currentViewIndex]}
+        currentViewLabel={currentViewCategory}
         onPrev={currentViewIndex > 0 ? () => navigateToView(currentViewIndex - 1) : undefined}
         onNext={currentViewIndex < views.length - 1 ? () => navigateToView(currentViewIndex + 1) : undefined}
         isFirstView={currentViewIndex === 0}
         isLastView={currentViewIndex === views.length - 1}
       />
-      <TaskInput />
+      <TaskInput currentView={currentViewCategory} /> {/* Pass current view category */}
       <main {...pageSwipeHandlers} className="flex-grow flex flex-col overflow-hidden">
         <TaskListContainer currentViewIndex={currentViewIndex} views={views} ref={taskListRef} />
       </main>

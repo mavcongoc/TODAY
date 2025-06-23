@@ -53,14 +53,26 @@ const TaskDetailsModal: React.FC = () => {
 
   return (
     <Dialog open={!!taskForDetails} onOpenChange={(isOpen) => !isOpen && closeDetailsModal()}>
-      <DialogContent className="w-[calc(100%-2rem)] max-w-lg mx-auto sm:mx-auto rounded-lg">
-        <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6 text-left">
+      {/*
+        The DialogContent from shadcn/ui is already designed for centering.
+        We ensure it doesn't exceed screen width on mobile by setting w-full
+        and applying horizontal margins via padding on its direct child or using max-width.
+        The `sm:max-w-lg` class handles larger screens.
+        The `fixed left-[50%] top-[50%] ... translate-x-[-50%] translate-y-[-50%]` handles centering.
+      */}
+      <DialogContent className="p-0 w-[90vw] max-w-lg rounded-lg sm:w-full">
+        <DialogHeader className="px-4 pt-5 sm:px-6 sm:pt-6 text-left">
           <DialogTitle className="text-lg sm:text-xl">Task Details</DialogTitle>
-          <p className="text-sm text-neutral-500 truncate pt-1">{taskForDetails.text}</p>
+          {taskForDetails && (
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 truncate pt-1">{taskForDetails.text}</p>
+          )}
         </DialogHeader>
         <div className="px-4 pb-4 sm:px-6 sm:pb-6 space-y-4 max-h-[60vh] sm:max-h-[70vh] overflow-y-auto">
           <div>
-            <label htmlFor="task-notes" className="block text-sm font-medium text-neutral-700 mb-1">
+            <label
+              htmlFor="task-notes"
+              className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
+            >
               Notes
             </label>
             <Textarea
@@ -68,17 +80,17 @@ const TaskDetailsModal: React.FC = () => {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add any notes for this task..."
-              rows={3} // Adjusted for mobile
+              rows={3}
               className="w-full focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
-            <h3 className="text-sm font-medium text-neutral-700 mb-2">Sub-tasks</h3>
+            <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Sub-tasks</h3>
             <div className="space-y-2 mb-3">
               {subTasks.map((subTask) => (
                 <div
                   key={subTask.id}
-                  className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-md"
+                  className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-md"
                 >
                   <Checkbox
                     id={`subtask-${subTask.id}`}
@@ -124,7 +136,9 @@ const TaskDetailsModal: React.FC = () => {
               </Button>
             </div>
             {subTasks.length === 0 && (
-              <p className="text-xs text-neutral-400 mt-2 text-center sm:text-left">No sub-tasks yet.</p>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-2 text-center sm:text-left">
+                No sub-tasks yet.
+              </p>
             )}
           </div>
         </div>

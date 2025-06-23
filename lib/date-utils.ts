@@ -2,15 +2,18 @@ import { format, addDays, startOfDay, isSameDay, isBefore, parseISO } from "date
 
 export const getTodayDateString = (): string => format(startOfDay(new Date()), "yyyy-MM-dd")
 
-export const getTomorrowDateString = (): string => format(addDays(startOfDay(new Date()), 1), "yyyy-MM-dd")
+// Removed getTomorrowDateString and getDayAfterTomorrowDateString as they are covered by getTargetDateForCategory
 
-export const getDayAfterTomorrowDateString = (): string => format(addDays(startOfDay(new Date()), 2), "yyyy-MM-dd")
+export const getTargetDateForCategory = (
+  category: "today" | "tomorrow" | "next3days",
+  baseDateString?: string, // Optional: base date to calculate from, defaults to actual today
+): string => {
+  const baseDate = baseDateString ? startOfDay(parseISO(baseDateString)) : startOfDay(new Date())
 
-export const getTargetDateForCategory = (category: "today" | "tomorrow" | "next3days"): string => {
-  if (category === "today") return getTodayDateString()
-  if (category === "tomorrow") return getTomorrowDateString()
-  // For 'next3days', default to day after tomorrow when adding a new task initially
-  return getDayAfterTomorrowDateString()
+  if (category === "today") return format(baseDate, "yyyy-MM-dd")
+  if (category === "tomorrow") return format(addDays(baseDate, 1), "yyyy-MM-dd")
+  // For 'next3days', default to two days from the baseDate
+  return format(addDays(baseDate, 2), "yyyy-MM-dd")
 }
 
 export const getDueCategory = (
