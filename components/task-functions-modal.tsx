@@ -11,8 +11,15 @@ import type { DueCategory } from "@/lib/types"
 import { Clock, CalendarDays } from "lucide-react"
 
 const TaskFunctionsModal: React.FC = () => {
-  const { taskForFunctions, closeTaskFunctionsModal, updateTaskTargetDate, updateTaskDetails, effectiveDate } =
-    useTasks()
+  const {
+    taskForFunctions,
+    closeTaskFunctionsModal,
+    updateTaskTargetDate,
+    updateTaskDetails,
+    effectiveDate,
+    notificationPermission, // Get current permission status
+    requestNotificationPermission, // Get function to request permission
+  } = useTasks()
   const [selectedAlarmTime, setSelectedAlarmTime] = useState<string>("")
 
   useEffect(() => {
@@ -30,18 +37,45 @@ const TaskFunctionsModal: React.FC = () => {
   const handleReassign = (category: "today" | "tomorrow" | "next3days") => {
     const newTargetDate = getTargetDateForCategory(category, effectiveDate)
     updateTaskTargetDate(taskForFunctions.id, newTargetDate)
-    // No need to close here, updateTaskTargetDate already closes the modal
+    // updateTaskTargetDate already closes the modal
   }
 
-  const handleSaveAlarm = () => {
-    updateTaskDetails(taskForFunctions.id, { alarmTime: selectedAlarmTime || null })
+  const handleSaveAlarm = async () => {
+    if (!selectedAlarmTime) {
+      // If clearing alarm by setting empty time, just update
+      updateTaskDetails(taskForFunctions.id, { alarmTime: null })
+      closeTaskFunctionsModal()
+      return
+    }
+
+    let currentPermission = notificationPermission
+    if (typeof window !== "undefined" && "Notification" in window) {
+      currentPermission = Notification.permission // Get the most up-to-date permission
+    }
+
+    if (currentPermission === "default") {
+      const permissionResult = await requestNotificationPermission()
+      if (permissionResult !== "granted") {
+        // User denied or dismissed, still save alarm time but they won't get a notification
+        updateTaskDetails(taskForFunctions.id, { alarmTime: selectedAlarmTime })
+        closeTaskFunctionsModal()
+        return
+      }
+    } else if (currentPermission === "denied") {
+      alert(
+        "Notifications are disabled. Please enable them in browser settings for alarms to work. Alarm time will be saved.",
+      )
+    }
+
+    updateTaskDetails(taskForFunctions.id, { alarmTime: selectedAlarmTime })
     closeTaskFunctionsModal()
   }
 
   const handleClearAlarm = () => {
     updateTaskDetails(taskForFunctions.id, { alarmTime: null })
     setSelectedAlarmTime("")
-    closeTaskFunctionsModal()
+    // Optionally close modal or keep it open if user might want to set a new time
+    // closeTaskFunctionsModal(); // Let's keep it open for now
   }
 
   const dueOptions: { label: string; category: DueCategory }[] = [
@@ -66,7 +100,6 @@ const TaskFunctionsModal: React.FC = () => {
           )}
         </DialogHeader>
         <div className="px-4 pb-4 sm:px-6 sm:pb-6 space-y-6 max-h-[60vh] sm:max-h-[70vh] overflow-y-auto">
-          {/* Due Date Reassignment Section */}
           <div>
             <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2 flex items-center gap-2">
               <CalendarDays size={16} /> Reassign Due Date
@@ -85,7 +118,6 @@ const TaskFunctionsModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Alarm Section */}
           <div>
             <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2 flex items-center gap-2">
               <Clock size={16} /> Set Alarm
@@ -98,13 +130,17 @@ const TaskFunctionsModal: React.FC = () => {
                 className="flex-grow"
                 aria-label="Set alarm time"
               />
-              <Button onClick={handleSaveAlarm} disabled={!selectedAlarmTime} className="shrink-0">
-                Set
+              <Button
+                onClick={handleSaveAlarm}
+                disabled={!selectedAlarmTime && !taskForFunctions.alarmTime}
+                className="shrink-0"
+              >
+                {selectedAlarmTime ? "Set" : "Save"}
               </Button>
               <Button
                 onClick={handleClearAlarm}
                 variant="outline"
-                disabled={!taskForFunctions.alarmTime}
+                disabled={!taskForFunctions.alarmTime && !selectedAlarmTime}
                 className="shrink-0"
               >
                 Clear
@@ -112,7 +148,12 @@ const TaskFunctionsModal: React.FC = () => {
             </div>
             {taskForFunctions.alarmTime && (
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 text-center sm:text-left">
-                Alarm set for {taskForFunctions.alarmTime}
+                Current alarm: {taskForFunctions.alarmTime}
+              </p>
+            )}
+            {notificationPermission === "denied" && (
+              <p className="text-xs text-red-500 mt-2">
+                Notifications are disabled in your browser settings. Alarms won't be shown.
               </p>
             )}
           </div>

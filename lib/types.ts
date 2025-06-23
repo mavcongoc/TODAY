@@ -45,4 +45,8 @@ export interface TaskContextType {
   isLoading: boolean // Loading state
   exportTasks: () => string // For backup/export
   importTasks: (tasksJson: string) => boolean // For restore/import
+
+  // For Notifications
+  notificationPermission: NotificationPermission | null // Can be 'default', 'granted', 'denied'
+  requestNotificationPermission: () => Promise<NotificationPermission | void>
 }
