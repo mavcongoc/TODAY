@@ -4,8 +4,8 @@ import { useCallback, useRef, type MouseEvent, type TouchEvent } from "react"
 
 const defaultOptions = {
   shouldPreventDefault: true,
-  delay: 300,
-  moveThreshold: 10, // Cancel long press if pointer moves more than 10px
+  delay: 500,
+  moveThreshold: 8, // More sensitive to catch swipes earlier
 }
 
 type LongPressEvent<T> = MouseEvent<T> | TouchEvent<T>
@@ -25,7 +25,7 @@ export const useLongPress = <T extends HTMLElement>(
 
   const start = useCallback(
     (event: LongPressEvent<T>) => {
-      if (isPressedRef.current) return // Already handling a press
+      if (isPressedRef.current) return
 
       isPressedRef.current = true
       isLongPressTriggeredRef.current = false
@@ -35,8 +35,8 @@ export const useLongPress = <T extends HTMLElement>(
       startCoordsRef.current = { x: clientX, y: clientY }
 
       timeoutRef.current = setTimeout(() => {
-        // Only trigger long press if not cancelled by movement
         if (!hasMovedBeyondThresholdRef.current && isPressedRef.current) {
+          console.log("Long press triggered")
           onLongPress(event)
           isLongPressTriggeredRef.current = true
         }
@@ -45,16 +45,11 @@ export const useLongPress = <T extends HTMLElement>(
     [onLongPress, delay],
   )
 
-  const cancel = useCallback((event?: LongPressEvent<T>) => {
+  const cancel = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
     }
-    // If event is provided and it's a 'leave' event, don't reset isPressedRef
-    // This allows long press to continue if mouse leaves and re-enters quickly
-    // For touch, 'cancel' implies the gesture is over.
-    if (!event || event.type !== "mouseleave") {
-      isPressedRef.current = false
-    }
+    isPressedRef.current = false
   }, [])
 
   const handleMove = useCallback(
@@ -68,6 +63,7 @@ export const useLongPress = <T extends HTMLElement>(
       const deltaY = Math.abs(clientY - startCoordsRef.current.y)
 
       if (deltaX > moveThreshold || deltaY > moveThreshold) {
+        console.log("Movement detected, cancelling long press", { deltaX, deltaY, moveThreshold })
         hasMovedBeyondThresholdRef.current = true
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current)
@@ -89,9 +85,15 @@ export const useLongPress = <T extends HTMLElement>(
         event.preventDefault()
       }
 
-      // Trigger onClick only if it wasn't a long press and no significant movement occurred
+      // Only trigger onClick if it wasn't a long press and no significant movement occurred
       if (onClick && !isLongPressTriggeredRef.current && !hasMovedBeyondThresholdRef.current) {
+        console.log("Click triggered")
         onClick(event)
+      } else {
+        console.log("Click blocked:", {
+          isLongPress: isLongPressTriggeredRef.current,
+          hasMoved: hasMovedBeyondThresholdRef.current,
+        })
       }
 
       isPressedRef.current = false
@@ -102,18 +104,10 @@ export const useLongPress = <T extends HTMLElement>(
     [onClick, shouldPreventDefault],
   )
 
-  const handleMouseLeave = useCallback((event: MouseEvent<T>) => {
-    // A common pattern is to cancel long press if mouse leaves the element
-    // but not necessarily end the "pressed" state immediately,
-    // allowing for slight out-of-bounds movement.
-    // For simplicity here, we'll just clear the timeout.
+  const handleMouseLeave = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
     }
-    // If you want to fully cancel the press on mouse leave:
-    // if (isPressedRef.current) {
-    //   end(event);
-    // }
   }, [])
 
   return {
@@ -123,7 +117,7 @@ export const useLongPress = <T extends HTMLElement>(
     onTouchEnd: end as (e: TouchEvent<T>) => void,
     onMouseMove: handleMove as (e: MouseEvent<T>) => void,
     onTouchMove: handleMove as (e: TouchEvent<T>) => void,
-    onMouseLeave: handleMouseLeave, // Changed from `cancel` to `handleMouseLeave` for more specific logic if needed
-    onTouchCancel: end as (e: TouchEvent<T>) => void, // Handle touch cancel events
+    onMouseLeave: handleMouseLeave,
+    onTouchCancel: end as (e: TouchEvent<T>) => void,
   }
 }
