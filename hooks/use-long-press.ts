@@ -4,7 +4,7 @@ import { useCallback, useRef, type MouseEvent, type TouchEvent } from "react"
 
 const defaultOptions = {
   shouldPreventDefault: true,
-  delay: 500,
+  delay: 700, // Increased delay
   moveThreshold: 5, // Very sensitive to catch any movement
 }
 
